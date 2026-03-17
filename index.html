@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a3d5c">
+<title>Site Pulse — דוח יומי</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Heebo', sans-serif;
+    background: #f0f4f8;
+    color: #1a1a2e;
+    min-height: 100vh;
+    direction: rtl;
+  }
+  .header {
+    background: linear-gradient(135deg, #1a3d5c, #2d6a9f);
+    color: white;
+    padding: 20px 16px 16px;
+    text-align: center;
+  }
+  .header-title { font-size: 20px; font-weight: 900; margin-bottom: 4px; }
+  .header-sub   { font-size: 12px; opacity: 0.8; }
+  .header-badge {
+    display: inline-block; margin-top: 10px;
+    background: rgba(255,255,255,0.15); border-radius: 20px;
+    padding: 5px 14px; font-size: 11px; font-weight: 700;
+  }
+  .card {
+    background: white; border-radius: 14px; padding: 16px;
+    margin: 12px 12px 0; box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+  }
+  .card-title {
+    font-size: 11px; font-weight: 800; color: #888; text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 12px;
+  }
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label {
+    display: block; font-size: 12px; font-weight: 700; color: #555;
+    margin-bottom: 5px;
+  }
+  .field label .req { color: #e53e3e; margin-right: 2px; }
+  .inp {
+    width: 100%; padding: 11px 12px;
+    border: 1.5px solid #dde1e7; border-radius: 9px;
+    font-family: 'Heebo', sans-serif; font-size: 14px; color: #1a1a2e;
+    background: #fafafa; direction: rtl;
+    transition: border-color 0.15s;
+  }
+  .inp:focus { outline: none; border-color: #2d6a9f; background: white; }
+  textarea.inp { resize: none; line-height: 1.6; }
+  select.inp { appearance: none; cursor: pointer; }
+
+  /* Weather selector */
+  .weather-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+  }
+  .weather-btn {
+    padding: 10px 6px; border: 2px solid #dde1e7; border-radius: 9px;
+    background: #fafafa; font-family: 'Heebo', sans-serif;
+    font-size: 12px; font-weight: 700; cursor: pointer; text-align: center;
+    color: #555; transition: all 0.15s;
+  }
+  .weather-btn.active {
+    border-color: #2d6a9f; background: rgba(45,106,159,0.08); color: #2d6a9f;
+  }
+
+  /* Workers counter */
+  .counter {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .counter-btn {
+    width: 40px; height: 40px; border-radius: 50%;
+    border: 2px solid #dde1e7; background: white;
+    font-size: 22px; font-weight: 700; cursor: pointer; color: #2d6a9f;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .counter-btn:active { background: #e8f0fb; }
+  .counter-val {
+    font-size: 28px; font-weight: 900; color: #1a3d5c; min-width: 40px; text-align: center;
+  }
+
+  /* Rating stars */
+  .stars { display: flex; gap: 8px; }
+  .star {
+    font-size: 28px; cursor: pointer; opacity: 0.3; transition: opacity 0.12s;
+  }
+  .star.active { opacity: 1; }
+
+  /* Photo area */
+  .photo-area {
+    border: 2px dashed #dde1e7; border-radius: 10px;
+    padding: 16px; text-align: center; cursor: pointer;
+    color: #888; font-size: 13px; font-weight: 700;
+    transition: border-color 0.15s;
+  }
+  .photo-area:active { border-color: #2d6a9f; }
+  .photo-previews { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .photo-thumb {
+    width: 72px; height: 72px; border-radius: 8px;
+    object-fit: cover; border: 1.5px solid #dde1e7;
+  }
+
+  /* Submit button */
+  .submit-btn {
+    display: block; width: calc(100% - 24px); margin: 16px 12px 32px;
+    padding: 18px; background: linear-gradient(135deg, #25d366, #128c7e);
+    color: white; border: none; border-radius: 14px;
+    font-family: 'Heebo', sans-serif; font-size: 17px; font-weight: 900;
+    cursor: pointer; text-align: center;
+    box-shadow: 0 4px 14px rgba(37,211,102,0.3);
+  }
+  .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* Info row */
+  .info-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 9px 12px; background: rgba(45,106,159,0.06);
+    border-radius: 8px; margin-bottom: 8px;
+    font-size: 13px;
+  }
+  .info-label { color: #888; font-weight: 600; font-size: 11px; }
+  .info-val   { font-weight: 800; color: #1a3d5c; }
+
+  /* Loading */
+  #loading-screen {
+    position: fixed; inset: 0; background: white;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 999;
+  }
+  .spinner {
+    width: 44px; height: 44px;
+    border: 4px solid #dde1e7; border-top-color: #2d6a9f;
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+    margin-bottom: 16px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Success screen */
+  #success-screen {
+    display: none; position: fixed; inset: 0; background: white;
+    flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 32px;
+  }
+  .success-icon { font-size: 72px; margin-bottom: 20px; }
+  .success-title { font-size: 24px; font-weight: 900; color: #128c7e; margin-bottom: 10px; }
+  .success-sub   { font-size: 15px; color: #666; line-height: 1.6; }
+
+  /* Error */
+  #error-screen {
+    display: none; position: fixed; inset: 0; background: white;
+    flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 32px;
+  }
+  .error-icon  { font-size: 60px; margin-bottom: 16px; }
+  .error-title { font-size: 20px; font-weight: 900; color: #e53e3e; margin-bottom: 10px; }
+  .error-sub   { font-size: 14px; color: #888; margin-bottom: 20px; }
+  .retry-btn {
+    padding: 12px 28px; background: #2d6a9f; color: white; border: none;
+    border-radius: 10px; font-family: 'Heebo', sans-serif; font-size: 14px;
+    font-weight: 800; cursor: pointer;
+  }
+
+  /* Toast */
+  #toast {
+    position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.8); color: white; padding: 10px 20px;
+    border-radius: 20px; font-size: 13px; font-weight: 700;
+    opacity: 0; transition: opacity 0.3s; z-index: 9999; white-space: nowrap;
+    pointer-events: none;
+  }
+  #toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <div style="font-size:14px;color:#888;font-weight:700;">טוען טופס...</div>
+</div>
+
+<div id="success-screen">
+  <div class="success-icon">✅</div>
+  <div class="success-title">הדוח נשלח בהצלחה!</div>
+  <div class="success-sub" id="success-detail">תודה. הדוח התקבל ויעובד על ידי בני פרסקי.</div>
+</div>
+
+<div id="error-screen">
+  <div class="error-icon">⚠️</div>
+  <div class="error-title" id="error-title">שגיאה בטעינת הטופס</div>
+  <div class="error-sub" id="error-detail">נסה שוב או פנה לבני פרסקי.</div>
+  <button class="retry-btn" onclick="location.reload()">נסה שוב</button>
+</div>
+
+<div id="main-form" style="display:none;">
+  <div class="header">
+    <div class="header-title">🏗️ Site Pulse</div>
+    <div class="header-sub">דוח עבודה יומי — בני פרסקי בניה</div>
+    <div class="header-badge" id="header-badge">טוען...</div>
+  </div>
+
+  <!-- Pre-filled info (read-only) -->
+  <div class="card" id="card-info">
+    <div class="card-title">פרטי הבקשה</div>
+    <div class="info-row">
+      <span class="info-label">קבלן</span>
+      <span class="info-val" id="info-contractor">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">פרויקט</span>
+      <span class="info-val" id="info-project">—</span>
+    </div>
+    <div class="info-row">
+      <span class="info-label">תאריך</span>
+      <span class="info-val" id="info-date">—</span>
+    </div>
+  </div>
+
+  <!-- Who is filling -->
+  <div class="card">
+    <div class="card-title">פרטי הממלא</div>
+    <div class="field">
+      <label>שם מלא <span class="req">*</span></label>
+      <input class="inp" id="f-submitted-by" type="text" placeholder="שם הממלא">
+    </div>
+  </div>
+
+  <!-- Weather -->
+  <div class="card">
+    <div class="card-title">מזג אוויר</div>
+    <div class="weather-grid" id="weather-grid">
+      <button class="weather-btn" data-val="שמשי"   onclick="setWeather(this)">☀️<br>שמשי</button>
+      <button class="weather-btn" data-val="מעונן"   onclick="setWeather(this)">⛅<br>מעונן</button>
+      <button class="weather-btn" data-val="גשום"    onclick="setWeather(this)">🌧️<br>גשום</button>
+      <button class="weather-btn" data-val="סופה"    onclick="setWeather(this)">🌩️<br>סופה</button>
+      <button class="weather-btn" data-val="שרב"     onclick="setWeather(this)">🌵<br>שרב</button>
+      <button class="weather-btn" data-val="קר"      onclick="setWeather(this)">❄️<br>קר</button>
+    </div>
+  </div>
+
+  <!-- Workers -->
+  <div class="card">
+    <div class="card-title">פועלים באתר <span class="req">*</span></div>
+    <div class="counter">
+      <button class="counter-btn" onclick="changeWorkers(-1)">−</button>
+      <div class="counter-val" id="workers-val">0</div>
+      <button class="counter-btn" onclick="changeWorkers(1)">+</button>
+      <div style="font-size:13px;color:#888;margin-right:4px;">פועלים</div>
+    </div>
+  </div>
+
+  <!-- Activities -->
+  <div class="card">
+    <div class="card-title">עבודות שבוצעו <span class="req">*</span></div>
+    <div class="field">
+      <textarea class="inp" id="f-activities" rows="4" placeholder="תאר את העבודות שבוצעו היום באתר..."></textarea>
+    </div>
+  </div>
+
+  <!-- Tools & Equipment -->
+  <div class="card">
+    <div class="card-title">ציוד וכלי עבודה</div>
+    <div class="field">
+      <textarea class="inp" id="f-tools" rows="3" placeholder="ציוד, מכשירים, רכבים ששימשו היום..."></textarea>
+    </div>
+  </div>
+
+  <!-- Issues -->
+  <div class="card">
+    <div class="card-title">בעיות / חריגות</div>
+    <div class="field">
+      <textarea class="inp" id="f-issues" rows="3" placeholder="בעיות שנתגלו, עיכובים, חומרים חסרים..."></textarea>
+    </div>
+  </div>
+
+  <!-- Remarks -->
+  <div class="card">
+    <div class="card-title">הערות נוספות</div>
+    <div class="field">
+      <textarea class="inp" id="f-remarks" rows="3" placeholder="כל מה שצריך לדעת..."></textarea>
+    </div>
+  </div>
+
+  <!-- Day rating -->
+  <div class="card">
+    <div class="card-title">דירוג היום</div>
+    <div class="stars" id="stars-row">
+      <span class="star" data-v="1" onclick="setRating(1)">⭐</span>
+      <span class="star" data-v="2" onclick="setRating(2)">⭐</span>
+      <span class="star" data-v="3" onclick="setRating(3)">⭐</span>
+      <span class="star" data-v="4" onclick="setRating(4)">⭐</span>
+      <span class="star" data-v="5" onclick="setRating(5)">⭐</span>
+    </div>
+  </div>
+
+  <!-- Photos -->
+  <div class="card">
+    <div class="card-title">תמונות מהאתר</div>
+    <label class="photo-area" for="photo-input">
+      📷 צלם תמונה או בחר מהגלריה
+      <input type="file" id="photo-input" accept="image/*" multiple
+             capture="environment" style="display:none;" onchange="handlePhotos(this)">
+    </label>
+    <div class="photo-previews" id="photo-previews"></div>
+  </div>
+
+  <button class="submit-btn" id="submit-btn" onclick="submitReport()">
+    ✅ שלח דוח
+  </button>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── SUPABASE ──────────────────────────────────────────────────────
+const SB_URL = 'https://vmcipofovheztbjmhwsl.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZtY2lwb2ZvdmhlenRiam1od3NsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE0NjE2MTcsImV4cCI6MjA4NzAzNzYxN30.LPq5N2Xo8iEqjgz2UhmdzUdh5tpGT3EYzSxJcYBEJ1w';
+const SB_HEADERS = { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY, 'Content-Type': 'application/json' };
+
+// ── STATE ─────────────────────────────────────────────────────────
+var requestData = null;   // the site_pulse_requests row
+var workers     = 0;
+var weather     = '';
+var rating      = 0;
+var photos      = [];     // base64 or URLs
+
+// ── INIT ──────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', initForm);
+
+async function initForm() {
+  var params  = new URLSearchParams(window.location.search);
+  var reqId   = params.get('req');
+
+  if (reqId) {
+    // ── LINKED MODE: fetch from site_pulse_requests ──────────────
+    try {
+      var res = await fetch(
+        SB_URL + '/rest/v1/site_pulse_requests?id=eq.' + reqId + '&select=*',
+        { headers: SB_HEADERS }
+      );
+      var rows = await res.json();
+      if (!rows || !rows.length) {
+        showError('קישור לא תקין', 'הבקשה לא נמצאה. ייתכן שפג תוקפה או שהקישור שגוי.');
+        return;
+      }
+      requestData = rows[0];
+
+      // Check if already submitted
+      if (requestData.status === 'submitted') {
+        showSuccess(
+          'הדוח כבר נשלח',
+          'הדוח עבור ' + requestData.project_name + ' כבר הוגש בהצלחה.\nאין צורך להגיש שוב.'
+        );
+        return;
+      }
+
+      // Pre-fill UI
+      document.getElementById('info-contractor').textContent = requestData.contractor_name || '—';
+      document.getElementById('info-project').textContent    = requestData.project_name    || '—';
+      document.getElementById('info-date').textContent       = formatDate(requestData.report_date);
+      document.getElementById('header-badge').textContent    = requestData.project_name || 'בקשה פעילה';
+      document.getElementById('f-submitted-by').value        = requestData.contractor_name || '';
+
+    } catch(e) {
+      showError('שגיאת תקשורת', 'לא ניתן לטעון את הטופס. בדוק חיבור אינטרנט ונסה שוב.');
+      return;
+    }
+
+  } else {
+    // ── SELF-INITIATED MODE: contractor opens form themselves ─────
+    document.getElementById('info-contractor').textContent = 'עצמאי';
+    document.getElementById('info-project').textContent    = 'יש לציין בהערות';
+    document.getElementById('info-date').textContent       = formatDate(new Date().toISOString().slice(0,10));
+    document.getElementById('header-badge').textContent    = 'דוח עצמאי';
+    document.getElementById('card-info').style.display     = 'none';
+  }
+
+  hideLoading();
+}
+
+function hideLoading() {
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('main-form').style.display = 'block';
+}
+
+function showError(title, detail) {
+  document.getElementById('loading-screen').style.display = 'none';
+  document.getElementById('error-title').textContent  = title;
+  document.getElementById('error-detail').textContent = detail;
+  document.getElementById('error-screen').style.display = 'flex';
+}
+
+function showSuccess(title, detail) {
+  document.getElementById('loading-screen').style.display  = 'none';
+  document.getElementById('main-form').style.display       = 'none';
+  document.getElementById('success-screen').style.display  = 'flex';
+  // Override default success text if called with custom args
+  if (title && title !== 'הדוח נשלח בהצלחה!') {
+    document.querySelector('.success-title').textContent = title;
+    document.getElementById('success-detail').textContent = detail;
+  } else if (detail) {
+    document.getElementById('success-detail').textContent = detail;
+  }
+}
+
+// ── FORM CONTROLS ─────────────────────────────────────────────────
+function setWeather(btn) {
+  document.querySelectorAll('.weather-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  weather = btn.dataset.val;
+}
+
+function changeWorkers(delta) {
+  workers = Math.max(0, workers + delta);
+  document.getElementById('workers-val').textContent = workers;
+}
+
+function setRating(val) {
+  rating = val;
+  document.querySelectorAll('.star').forEach(s => {
+    s.classList.toggle('active', parseInt(s.dataset.v) <= val);
+  });
+}
+
+function handlePhotos(input) {
+  var files = Array.from(input.files);
+  var previews = document.getElementById('photo-previews');
+  files.forEach(function(file) {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      photos.push({ base64: e.target.result, name: file.name });
+      var img = document.createElement('img');
+      img.className = 'photo-thumb';
+      img.src = e.target.result;
+      previews.appendChild(img);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// ── SUBMIT ────────────────────────────────────────────────────────
+async function submitReport() {
+  // Validation
+  var submittedBy = document.getElementById('f-submitted-by').value.trim();
+  var activities  = document.getElementById('f-activities').value.trim();
+  if (!submittedBy) { toast('⚠️ חסר שם הממלא'); return; }
+  if (!activities)  { toast('⚠️ חסר תיאור עבודות'); return; }
+  if (workers === 0) { toast('⚠️ יש לציין מספר פועלים'); return; }
+
+  var btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ שולח...';
+
+  try {
+    // Build report payload
+    var today = new Date().toISOString().slice(0,10);
+    var payload = {
+      contractor_id:   requestData ? requestData.contractor_id   : null,
+      project_id:      requestData ? requestData.project_id      : null,
+      contractor_name: requestData ? requestData.contractor_name : submittedBy,
+      project_name:    requestData ? requestData.project_name    : null,
+      request_id:      requestData ? requestData.id              : null,
+      report_date:     requestData ? requestData.report_date     : today,
+      submitted_by:    submittedBy,
+      weather:         weather || null,
+      workers_count:   workers,
+      activities:      activities,
+      tools_equipment: document.getElementById('f-tools').value.trim()   || null,
+      issues:          document.getElementById('f-issues').value.trim()  || null,
+      remarks:         document.getElementById('f-remarks').value.trim() || null,
+      day_rating:      rating || null,
+      photos:          photos.length ? JSON.stringify(photos.map(p => p.base64)) : '[]',
+      status:          'pending',
+      submitted_at:    new Date().toISOString()
+    };
+
+    // INSERT into site_reports
+    var r1 = await fetch(SB_URL + '/rest/v1/site_reports', {
+      method: 'POST',
+      headers: { ...SB_HEADERS, Prefer: 'return=minimal' },
+      body: JSON.stringify(payload)
+    });
+    if (!r1.ok) throw new Error('שגיאה בשמירת הדוח: ' + r1.status);
+
+    // UPDATE site_pulse_requests status → submitted
+    if (requestData) {
+      await fetch(SB_URL + '/rest/v1/site_pulse_requests?id=eq.' + requestData.id, {
+        method: 'PATCH',
+        headers: { ...SB_HEADERS, Prefer: 'return=minimal' },
+        body: JSON.stringify({ status: 'submitted', submitted_at: new Date().toISOString() })
+      });
+    }
+
+    // Show success
+    var projectName = requestData ? requestData.project_name : 'הפרויקט';
+    showSuccess('הדוח נשלח בהצלחה!', 'תודה ' + submittedBy + '.\nהדוח עבור ' + projectName + ' התקבל אצל בני פרסקי.');
+
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '✅ שלח דוח';
+    toast('שגיאה: ' + e.message);
+  }
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────
+function formatDate(isoDate) {
+  if (!isoDate) return '—';
+  var d = new Date(isoDate);
+  if (isNaN(d)) return isoDate;
+  return d.toLocaleDateString('he-IL', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+}
+
+var _toastTimer;
+function toast(msg) {
+  var el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(function() { el.classList.remove('show'); }, 2800);
+}
+</script>
+</body>
+</html>
